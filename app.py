@@ -13,9 +13,10 @@ async def respond(
     system_message,
 ):
     thread = await client.threads.create()
+    thread_id = thread["thread_id"]
     
-    await thread.messages.create(
-        thread_id=thread.id,
+    await client.threads.messages.create(
+        thread_id=thread_id,
         content=message,
         role="user"
     )
@@ -27,7 +28,7 @@ async def respond(
     response = ""
     
     async for chunk in client.runs.stream(
-        thread_id=thread.id,
+        thread_id=thread_id,
         assistant_id=assistants[0]["assistant_id"],
         input={},
         stream_mode="events",

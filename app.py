@@ -1,64 +1,54 @@
+import os
 import gradio as gr
-from huggingface_hub import InferenceClient
+from langgraph_sdk import get_client
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
-"""
-For more information on `huggingface_hub` Inference API support, please check the docs: https://huggingface.co/docs/huggingface_hub/v0.22.2/en/guides/inference
-"""
-client = InferenceClient("HuggingFaceH4/zephyr-7b-beta")
+LANGGRAPH_DEPLOYMENT = "https://chambre-agricole-chatbot-686407044d7f59d29a1e494685864177.us.langgraph.app/"
 
+client = get_client(url=LANGGRAPH_DEPLOYMENT)
 
-def respond(
+async def respond(
     message,
     history: list[tuple[str, str]],
     system_message,
-    max_tokens,
-    temperature,
-    top_p,
 ):
-    messages = [{"role": "system", "content": system_message}]
-
-    for val in history:
-        if val[0]:
-            messages.append({"role": "user", "content": val[0]})
-        if val[1]:
-            messages.append({"role": "assistant", "content": val[1]})
-
-    messages.append({"role": "user", "content": message})
-
+    messages = [SystemMessage(content=system_message)]
+    
+    for user_msg, ai_msg in history:
+        if user_msg:
+            messages.append(HumanMessage(content=user_msg))
+        if ai_msg:
+            messages.append(AIMessage(content=ai_msg))
+    
+    messages.append(HumanMessage(content=message))
+    
+    assistants = await client.assistants.search(
+        graph_id="retrieval_graph", metadata={"created_by": "system"}
+    )
+    thread = await client.threads.create()
+    
     response = ""
-
-    for message in client.chat_completion(
-        messages,
-        max_tokens=max_tokens,
-        stream=True,
-        temperature=temperature,
-        top_p=top_p,
+    
+    async for chunk in client.runs.stream(
+        thread_id=thread["thread_id"],
+        assistant_id=assistants[0]["assistant_id"],
+        input={
+            "messages": messages
+        },
+        stream_mode="events",
     ):
-        token = message.choices[0].delta.content
+        if chunk.event == "events":
+            if chunk.data["event"] == "on_chat_model_stream":
+                token = chunk.data["data"]["chunk"]["content"]
+                response += token
+                yield response
 
-        response += token
-        yield response
-
-
-"""
-For information on how to customize the ChatInterface, peruse the gradio docs: https://www.gradio.app/docs/chatinterface
-"""
 demo = gr.ChatInterface(
     respond,
     additional_inputs=[
         gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
-        gr.Slider(
-            minimum=0.1,
-            maximum=1.0,
-            value=0.95,
-            step=0.05,
-            label="Top-p (nucleus sampling)",
-        ),
     ],
 )
-
 
 if __name__ == "__main__":
     demo.launch()

@@ -12,25 +12,19 @@ async def respond(
     history: list[tuple[str, str]],
     system_message,
 ):
-    thread = await client.threads.create()
-    thread_id = thread["thread_id"]
-    
-    await client.threads.messages.create(
-        thread_id=thread_id,
-        content=message,
-        role="user"
-    )
-    
     assistants = await client.assistants.search(
         graph_id="retrieval_graph", metadata={"created_by": "system"}
     )
+    thread = await client.threads.create()
     
     response = ""
     
     async for chunk in client.runs.stream(
-        thread_id=thread_id,
+        thread_id=thread["thread_id"],
         assistant_id=assistants[0]["assistant_id"],
-        input={},
+        input={
+            "messages": message
+        },
         stream_mode="events",
     ):
         if chunk.event == "events":

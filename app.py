@@ -30,39 +30,34 @@ async def respond(message, history, thread_state):
                 response += token
                 yield history + [(message, response)], thread_state
 
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    with gr.Row():
-        with gr.Column(scale=1):
-            gr.Markdown("### Historique des conversations")
-            chat_list = gr.Chatbot(height=700, show_label=False)
-        
-        with gr.Column(scale=3):
-            gr.Markdown("### Assistant R&D Agricole")
-            chatbot = gr.Chatbot(
-                height=600,
-                avatar_images=(
-                    "https://em-content.zobj.net/source/microsoft-teams/363/person_1f9d1.png",  # Person emoji
-                    "https://em-content.zobj.net/source/microsoft-teams/363/robot_1f916.png"  # Robot emoji
-                ),
-                container=True,
-                show_label=False,
-            )
-            with gr.Row():
-                txt = gr.Textbox(
-                    placeholder="Posez votre question ici concernant les données R&D agricoles...",
-                    show_label=False,
-                    container=False,
-                    scale=9,
-                )
-                submit_btn = gr.Button("Envoyer", scale=1)
-            
-            with gr.Row():
-                clear_btn = gr.Button("Effacer la conversation")
-            
-            thread_state = gr.State(value=None)
+def clear_conversation():
+    return [], None
 
-    def clear_conversation():
-        return [], None
+with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    with gr.Column(scale=3):
+        gr.Markdown("### Assistant R&D Agricole")
+        chatbot = gr.Chatbot(
+            height=600,
+            avatar_images=(
+                "https://em-content.zobj.net/source/microsoft-teams/337/farmer_1f9d1-200d-1f33e.png",
+                "https://em-content.zobj.net/source/microsoft-teams/363/robot_1f916.png"
+            ),
+            container=True,
+            show_label=False,
+        )
+        with gr.Row():
+            txt = gr.Textbox(
+                placeholder="Posez votre question ici concernant les données R&D agricoles...",
+                show_label=False,
+                container=False,
+                scale=9,
+            )
+            submit_btn = gr.Button("Envoyer", scale=1)
+        
+        with gr.Row():
+            clear_btn = gr.Button("Effacer la conversation")
+        
+        thread_state = gr.State() 
 
     txt.submit(
         respond,
@@ -70,7 +65,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         [chatbot, thread_state],
         api_name=False
     ).then(
-        lambda: "",  # Clear the textbox after submission
+        lambda: "",
         None,
         [txt]
     )
@@ -81,7 +76,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         [chatbot, thread_state],
         api_name=False
     ).then(
-        lambda: "",  # Clear the textbox after submission
+        lambda: "",
         None,
         [txt]
     )
@@ -93,29 +88,5 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         api_name=False
     )
 
-    gr.Markdown("""
-    <style>
-        .gradio-container {
-            background-color: #f5f7f5;
-        }
-        .contain {
-            max-width: 1200px !important;
-            margin: auto;
-        }
-        .message {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-        .user-message {
-            background-color: #e6f3ff;
-        }
-        .bot-message {
-            background-color: #f5f5f5;
-        }
-        footer {display: none !important}
-    </style>
-    """)
-
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)

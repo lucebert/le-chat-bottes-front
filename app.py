@@ -9,18 +9,23 @@ client = get_client(url=LANGGRAPH_DEPLOYMENT)
 
 async def respond(
     message,
-    history: list[tuple[str, str]],
+    history,
     system_message,
+    thread_state
 ):
     assistants = await client.assistants.search(
         graph_id="retrieval_graph", metadata={"created_by": "system"}
     )
-    thread = await client.threads.create()
+    
+    # Only create new thread if one doesn't exist
+    if not thread_state:
+        thread = await client.threads.create()
+        thread_state = thread["thread_id"]
     
     response = ""
     
     async for chunk in client.runs.stream(
-        thread_id=thread["thread_id"],
+        thread_id=thread_state,
         assistant_id=assistants[0]["assistant_id"],
         input={
             "messages": message
@@ -31,13 +36,41 @@ async def respond(
             if chunk.data["event"] == "on_chat_model_stream":
                 token = chunk.data["data"]["chunk"]["content"]
                 response += token
-                yield response
+                yield history + [(message, response)], thread_state
 
-demo = gr.ChatInterface(
-    respond,
-    additional_inputs=[
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
+demo = gr.Interface(
+    fn=respond,
+    inputs=[
+        gr.Textbox(
+            placeholder="Posez votre question ici concernant les données R&D agricoles...",
+            label="Votre question",
+            lines=2,
+        ),
+        gr.Chatbot(
+            height=600,
+            avatar_images=("👨‍🌾", "🤖")
+        ),
+        gr.State(value=None),
     ],
+    outputs=[
+        gr.Chatbot(),
+        gr.State(),
+    ],
+    title="Assistant R&D Agricole",
+    description="""
+    Bienvenue sur l'assistant de recherche R&D Agricole. 
+    Je peux vous aider à :
+    - Rechercher des données techniques
+    - Trouver des résultats d'expérimentations
+    - Accéder aux synthèses des études
+    - Consulter les références disponibles
+    """,
+    theme=gr.themes.Soft(),
+    css="""
+        .gradio-container {background-color: #f5f7f5}
+        .title {color: #2e5d1d}
+        .description {color: #4a4a4a}
+    """
 )
 
 if __name__ == "__main__":

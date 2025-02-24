@@ -9,32 +9,25 @@ client = get_client(url=LANGGRAPH_DEPLOYMENT)
 
 async def respond(
     message,
-    history: list[tuple[str, str]],
-    system_message,
 ):
-    messages = [SystemMessage(content=system_message)]
+    thread = await client.threads.create()
     
-    for user_msg, ai_msg in history:
-        if user_msg:
-            messages.append(HumanMessage(content=user_msg))
-        if ai_msg:
-            messages.append(AIMessage(content=ai_msg))
-    
-    messages.append(HumanMessage(content=message))
+    await client.messages.create(
+        thread_id=thread.id,
+        content=message,
+        role="user"
+    )
     
     assistants = await client.assistants.search(
         graph_id="retrieval_graph", metadata={"created_by": "system"}
     )
-    thread = await client.threads.create()
     
     response = ""
     
     async for chunk in client.runs.stream(
-        thread_id=thread["thread_id"],
-        assistant_id=assistants[0]["assistant_id"],
-        input={
-            "messages": messages
-        },
+        thread_id=thread.id,
+        assistant_id=assistants[0].id,
+        input={},
         stream_mode="events",
     ):
         if chunk.event == "events":

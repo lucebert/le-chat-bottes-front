@@ -8,7 +8,10 @@ LANGGRAPH_DEPLOYMENT = "https://chambre-agricole-chatbot-686407044d7f59d29a1e494
 client = get_client(url=LANGGRAPH_DEPLOYMENT)
 
 async def respond(
-    message,
+    message: str,
+    *,
+    history: list[tuple[str, str]] = None,
+    system_message: str = "You are a friendly Chatbot.",
 ):
     thread = await client.threads.create()
     
@@ -26,7 +29,7 @@ async def respond(
     
     async for chunk in client.runs.stream(
         thread_id=thread.id,
-        assistant_id=assistants[0].id,
+        assistant_id=assistants[0]["assistant_id"],
         input={},
         stream_mode="events",
     ):

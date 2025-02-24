@@ -8,10 +8,9 @@ LANGGRAPH_DEPLOYMENT = "https://chambre-agricole-chatbot-686407044d7f59d29a1e494
 client = get_client(url=LANGGRAPH_DEPLOYMENT)
 
 async def respond(
-    message: str,
-    *,
-    history: list[tuple[str, str]] = None,
-    system_message: str = "You are a friendly Chatbot.",
+    message,
+    history: list[tuple[str, str]],
+    system_message,
 ):
     thread = await client.threads.create()
     

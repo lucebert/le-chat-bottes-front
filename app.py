@@ -14,7 +14,7 @@ async def respond(
 ):
     thread = await client.threads.create()
     
-    await client.messages.create(
+    await thread.messages.create(
         thread_id=thread.id,
         content=message,
         role="user"

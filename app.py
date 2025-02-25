@@ -121,7 +121,7 @@ h1 {
                 feedback_send_btn = gr.Button("Envoyer", size="sm")
             
             thank_you_message = gr.HTML(
-                "<div style='color: #4CAF50; margin-top: 8px; display: none'>Merci pour votre retour !</div>",
+                "<div style='color: #4CAF50; margin-top: 8px;'>Merci pour votre retour !</div>",
                 visible=False
             )
         

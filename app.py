@@ -50,54 +50,110 @@ async def respond(message, history, thread_state):
                     run_id = chunk.data["run_id"]
                 token = chunk.data["data"]["chunk"]["content"]
                 response += token
-                yield history + [{"role": "user", "content": message}, 
-                               {"role": "assistant", "content": response}], thread_state, run_id
+                yield [
+                    *history,
+                    {"role": "user", "content": message},
+                    {"role": "assistant", "content": response}
+                ], thread_state, run_id
 
 def clear_conversation():
-    return [], None
+    return [], None, gr.update(visible=False)
 
-async def give_positive_feedback(run_id):
-    if run_id is not None:
-        await log_feedback(run_id, 1.0)
-    else:
-        logging.warning("Attempted to give positive feedback but run_id was None")
-
-async def give_negative_feedback(run_id):
-    if run_id is not None:
-        await log_feedback(run_id, 0.0)
-    else:
-        logging.warning("Attempted to give negative feedback but run_id was None")
-
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    with gr.Column(scale=3):
-        gr.Markdown("### Assistant R&D Agricole")
+with gr.Blocks(theme=gr.themes.Soft(), css="""
+h1 {
+    text-align: center;
+}
+.gradio-container {
+    max-width: 800px !important;
+}
+.feedback-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+}
+.feedback-buttons {
+    gap: 8px;
+}
+.selected-thumb {
+    background: #e0e0e0 !important;
+    border-color: #4CAF50 !important;
+}
+.examples .example {
+    background: #f0f0f0;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.examples .example:hover {
+    background: #e0e0e0;
+}
+""") as demo:
+    with gr.Column():
+        with gr.Row():
+            with gr.Column(scale=9):
+                gr.Markdown("# Le Chat Bottes 👢😺👢")
+        
         chatbot = gr.Chatbot(
-            height=600,
+            height=640,
             avatar_images=(
                 "https://em-content.zobj.net/source/microsoft-teams/337/farmer_1f9d1-200d-1f33e.png",
                 "https://em-content.zobj.net/source/microsoft-teams/363/robot_1f916.png"
             ),
-            container=True,
             show_label=False,
+            bubble_full_width=False,
+            container=False,
             type="messages"
         )
+
+        with gr.Column(visible=False) as feedback_card:
+            with gr.Row():
+                thumbs_up = gr.Button("👍", elem_classes="feedback-btn")
+                thumbs_down = gr.Button("👎", elem_classes="feedback-btn")
+            with gr.Row(visible=False) as feedback_input_row:
+                feedback_comment = gr.Textbox(
+                    placeholder="Commentaire (optionnel)",
+                    show_label=False,
+                    lines=2,
+                    max_lines=3
+                )
+                feedback_send_btn = gr.Button("Envoyer", size="sm")
+            
+            thank_you_message = gr.HTML(
+                "<div style='color: #4CAF50; margin-top: 8px; display: none'>Merci pour votre retour !</div>",
+                visible=False
+            )
         
         with gr.Row():
             txt = gr.Textbox(
-                placeholder="Posez votre question ici concernant les données R&D agricoles...",
+                placeholder="Posez votre question ici...",
                 show_label=False,
                 container=False,
-                scale=9,
+                scale=7,
+                autofocus=True,
+                max_lines=3,
             )
-            submit_btn = gr.Button("Envoyer", scale=1)
+            submit_btn = gr.Button("Envoyer", scale=1, size="sm")
+            clear_btn = gr.Button("Effacer", scale=1, size="sm")
         
         with gr.Row():
-            clear_btn = gr.Button("Effacer la conversation")
-            thumbs_up = gr.Button("👍")
-            thumbs_down = gr.Button("👎")
+            gr.Examples(
+                examples=[
+                    "Comment stocker l'eau de pluie sur une exploitation agricole ?",
+                    "Quelles rotations culturales favorisent l'adaptation climatique ?",
+                    "Comment réduire l'impact du gel printanier sur les vignes ?"
+                ],
+                inputs=txt,
+                label=""
+            )
         
+
+        feedback_alert = gr.HTML(visible=False)
+
         thread_state = gr.State()
         current_run_id = gr.State()
+        selected_thumb = gr.State()
 
     txt.submit(
         respond,
@@ -105,9 +161,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         [chatbot, thread_state, current_run_id],
         api_name=False
     ).then(
-        lambda: "",
+        lambda: ("", gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)),
         None,
-        [txt]
+        [txt, feedback_card, thank_you_message, thumbs_up, thumbs_down]
     )
     
     submit_btn.click(
@@ -116,29 +172,57 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         [chatbot, thread_state, current_run_id],
         api_name=False
     ).then(
-        lambda: "",
+        lambda: ("", gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)),
         None,
-        [txt]
+        [txt, feedback_card, thank_you_message, thumbs_up, thumbs_down]
     )
 
+    def show_feedback_input(thumb):
+        return (
+            gr.update(visible=True),  # feedback_input_row
+            thumb,                    # selected_thumb
+            gr.update(visible=False), # thumbs_up
+            gr.update(visible=False)  # thumbs_down
+        )
+
     thumbs_up.click(
-        lambda x: asyncio.run(give_positive_feedback(x)),
-        [current_run_id],
-        None,
-        api_name=False
+        show_feedback_input,
+        inputs=[gr.Number(1, visible=False)],
+        outputs=[feedback_input_row, selected_thumb, thumbs_up, thumbs_down]
     )
     
     thumbs_down.click(
-        lambda x: asyncio.run(give_negative_feedback(x)),
-        [current_run_id],
-        None,
-        api_name=False
+        show_feedback_input,
+        inputs=[gr.Number(0, visible=False)],
+        outputs=[feedback_input_row, selected_thumb, thumbs_up, thumbs_down]
+    )
+
+    def submit_feedback(run_id, score, comment):
+        asyncio.run(log_feedback(run_id, score, comment))
+        return (
+            gr.update(visible=True),  # thank_you_message
+            gr.update(value=""),      # feedback_comment
+            gr.update(visible=False), # feedback_input_row
+            gr.update(visible=False), # thumbs_up
+            gr.update(visible=False)  # thumbs_down
+        )
+
+    feedback_send_btn.click(
+        submit_feedback,
+        [current_run_id, selected_thumb, feedback_comment],
+        [thank_you_message, feedback_comment, feedback_input_row, thumbs_up, thumbs_down]
+    )
+    
+    feedback_comment.submit(
+        submit_feedback,
+        [current_run_id, selected_thumb, feedback_comment],
+        [thank_you_message, feedback_comment, feedback_input_row, thumbs_up, thumbs_down]
     )
 
     clear_btn.click(
         clear_conversation,
         None,
-        [chatbot, thread_state],
+        [chatbot, thread_state, feedback_card, thank_you_message],
         api_name=False
     )
 

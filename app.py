@@ -134,8 +134,7 @@ h1 {
                 autofocus=True,
                 max_lines=3,
             )
-            submit_btn = gr.Button("Envoyer", scale=1, size="sm")
-            clear_btn = gr.Button("Effacer", scale=1, size="sm")
+            submit_btn = gr.Button("Envoyer", scale=1)
         
         with gr.Row():
             gr.Examples(
@@ -217,13 +216,6 @@ h1 {
         submit_feedback,
         [current_run_id, selected_thumb, feedback_comment],
         [thank_you_message, feedback_comment, feedback_input_row, thumbs_up, thumbs_down]
-    )
-
-    clear_btn.click(
-        clear_conversation,
-        None,
-        [chatbot, thread_state, feedback_card, thank_you_message],
-        api_name=False
     )
 
 if __name__ == "__main__":

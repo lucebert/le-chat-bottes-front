@@ -63,8 +63,8 @@ with gr.Blocks(theme=gr.themes.Soft(), css="""
 h1 {
     text-align: center;
 }
-.gradio-container {
-    max-width: 800px !important;
+img {
+    margin: 0 !important;
 }
 .feedback-card {
     border: 1px solid #e0e0e0;
@@ -115,10 +115,9 @@ h1 {
                 feedback_comment = gr.Textbox(
                     placeholder="Commentaire (optionnel)",
                     show_label=False,
-                    lines=2,
-                    max_lines=3
+                    scale=3
                 )
-                feedback_send_btn = gr.Button("Envoyer", size="sm")
+                feedback_send_btn = gr.Button("Envoyer", scale=1)
             
             thank_you_message = gr.HTML(
                 "<div style='color: #4CAF50; margin-top: 8px;'>Merci pour votre retour !</div>",

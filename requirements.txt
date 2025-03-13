@@ -1,3 +1,5 @@
 huggingface_hub==0.25.2
 langgraph-sdk==0.1.53
 langchain-core==0.3.37
+gradio>=3.50.2
+# Add any other dependencies your app needs
